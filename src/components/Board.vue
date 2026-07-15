@@ -6,7 +6,7 @@
       <p class="sub-text">너무 긴 이동거리는 어려워 😣 그렇지만 여행은 가고 싶은 시니어 👵👴</p>
     </div>
 
-    <!-- 1. 게시글 작성/수정 폼 (모션 애니메이션 적용) -->
+    <!-- 1. 게시글 작성/수정 폼 -->
     <div v-if="isWriting || editingPost" class="board-form animate-fade-in">
       <h3>{{ editingPost ? '📍 코스 수정하기' : '📍 새 여행 코스 작성' }}</h3>
       <input v-model="form.title" placeholder="제목을 입력하세요 (예: [종로] 무장애 힐링 산책길)" />
@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <!-- 2. 게시글 상세 보기 (모션 애니메이션 적용) -->
+    <!-- 2. 게시글 상세 보기 -->
     <div v-else-if="selectedPost" class="board-detail animate-fade-in">
       <h3>
         <span v-if="selectedPost.is_notice" class="badge-notice-detail">추천 코스</span>
@@ -37,7 +37,7 @@
 
     <!-- 3. 게시글 목록 보기 -->
     <div v-else class="board-list animate-fade-in">
-      <!-- 🌟 상단 검색바 및 버튼 컨트롤 영역 -->
+      <!-- 상단 검색바 및 버튼 컨트롤 영역 -->
       <div class="board-controls">
         <div class="search-wrapper">
           <span class="search-icon">🔍</span>
@@ -48,41 +48,43 @@
             class="search-input"
           />
         </div>
-        <button @click="isWriting = true" class="btn-write">🗺️ 나만의 코스 등록하기</button>
+        <button @click="isWriting = true" class="btn-write">🗺️ 코스 등록</button>
       </div>
       
-      <table>
-        <thead>
-          <tr>
-            <th class="text-center">구분</th>
-            <th class="text-center">여행 코스 제목</th>
-            <th class="text-center">작성일</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- 🌟 검색어 필터링이 반영된 filteredPosts를 순회 -->
-          <tr 
-            v-for="(post, index) in filteredPosts" 
-            :key="post.id" 
-            @click="selectedPost = post"
-            :class="{ 'notice-row': post.is_notice }"
-            class="table-row-motion"
-          >
-            <td class="text-left">
-              <span v-if="post.is_notice" class="badge-notice">추천</span>
-              <span v-else class="visitor-id">#{{ posts.length - (index - noticePosts.length) }}</span>
-            </td>
-            <td :class="post.is_notice ? 'notice-title text-left' : 'title-link text-left'">
-              {{ post.title }}
-            </td>
-            <td class="text-left">{{ post.date }}</td>
-          </tr>
-          
-          <tr v-if="filteredPosts.length === 0">
-            <td colspan="3" class="no-data">검색 결과 또는 등록된 여행 코스가 없습니다.</td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- 🌟 트렌디하게 디자인된 테이블 (표) 영역 -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="text-center" style="width: 15%;">구분</th>
+              <th class="text-left" style="width: 65%;">여행 코스 제목</th>
+              <th class="text-center" style="width: 20%;">작성일</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr 
+              v-for="(post, index) in filteredPosts" 
+              :key="post.id" 
+              @click="selectedPost = post"
+              :class="{ 'notice-row': post.is_notice }"
+              class="table-row-motion"
+            >
+              <td class="text-center">
+                <span v-if="post.is_notice" class="badge-notice">추천</span>
+                <span v-else class="visitor-id">#{{ posts.length - (index - noticePosts.length) }}</span>
+              </td>
+              <td :class="post.is_notice ? 'notice-title text-left' : 'title-link text-left'">
+                {{ post.title }}
+              </td>
+              <td class="text-center date-col">{{ post.date }}</td>
+            </tr>
+            
+            <tr v-if="filteredPosts.length === 0">
+              <td colspan="3" class="no-data">검색 결과 또는 등록된 여행 코스가 없습니다.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -90,7 +92,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-// 고정 공지사항 데이터 (시니어 맞춤형 대표 코스 5선)
 const noticePosts = [
   {
     id: 'n1',
@@ -109,8 +110,7 @@ const noticePosts = [
   {
     id: 'n3',
     title: '대표 코스 3. 송파·잠실 도심 속 자연 코스',
-    content: `🏠 추천 베이스캠프 숙소: 롯데호텔 월드\n🎯 컨셉: "멀리 가지 않고 즐기는 도심 속 비밀 정원"\n⏱️ 총 소요 시간: 약 8시간\n\n📌 상세 코스 동선:\n숙소 ➡️ 롯데월드 ➡️ 석촌호수 산책로 ➡️ 서울숲 ➡️ 방이동 생태보전지역 ➡️ 숙소 리턴\n\n💡 시니어 꿀팁:
-석촌호수는 그늘이 많고 벤치가 촘촘하게 배치되어 있어 걷다 쉬어가기 가장 좋은 코스입니다. 서울숲은 평탄한 흙길 위주로 걸어보세요.`,
+    content: `🏠 추천 베이스캠프 숙소: 롯데호텔 월드\n🎯 컨셉: "멀리 가지 않고 즐기는 도심 속 비밀 정원"\n⏱️ 총 소요 시간: 약 8시간\n\n📌 상세 코스 동선:\n숙소 ➡️ 롯데월드 ➡️ 석촌호수 산책로 ➡️ 서울숲 ➡️ 방이동 생태보전지역 ➡️ 숙소 리턴\n\n💡 시니어 꿀팁:\n석촌호수는 그늘이 많고 벤치가 촘촘하게 배치되어 있어 걷다 쉬어가기 가장 좋은 코스입니다. 서울숲은 평탄한 흙길 위주로 걸어보세요.`,
     date: '2026. 07. 15',
     is_notice: true
   },
@@ -135,15 +135,12 @@ const isWriting = ref(false)
 const selectedPost = ref(null)
 const editingPost = ref(null)
 const form = ref({ title: '', content: '', password: '' })
-
-// 🌟 검색어 상태 관리
 const searchQuery = ref('')
 
 const combinedPosts = computed(() => {
   return [...noticePosts, ...posts.value]
 })
 
-// 🌟 검색 가중치 필터링 기능 (제목 기준)
 const filteredPosts = computed(() => {
   if (!searchQuery.value.trim()) {
     return combinedPosts.value
@@ -246,51 +243,76 @@ const resetForm = () => {
 </script>
 
 <style scoped>
-/* 🎨 지도(Map) 콘셉트 기본 디자인 디자인 */
+/* 🎨 전체 레이아웃 & 배경 트렌디화 */
 .board-container { 
   max-width: 850px; 
-  margin: 30px auto; 
-  padding: 25px; 
-  font-family: 'Malgun Gothic', sans-serif; 
-  background-color: #F9F6F0; 
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  margin: 40px auto; 
+  padding: 35px; 
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; 
+  background: linear-gradient(145deg, #fdfbfa 0%, #f4f0e6 100%); /* 입체감 넘치는 부드러운 그라데이션 */
+  border-radius: 28px; /* 둥근 모서리 극대화 */
+  box-shadow: 
+    20px 20px 60px #e0dad0, 
+    -20px -20px 60px #ffffff; /* 트렌디한 뉴모피즘 소프트 그림자 */
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+/* 🌟 배달의민족 한나체 폰트 클래스 매칭 */
+h2, h3, th, button, .badge-notice, .badge-notice-detail, .visitor-id {
+  font-family: 'BM HANNA Pro', 'BMHANNAPro', sans-serif !important;
+  font-weight: normal; 
+}
+
+/* 상단 소개 영역 */
 .board-header {
-  border-bottom: 3px double #2D5A27;
-  padding-bottom: 15px;
-  margin-bottom: 25px;
+  border-bottom: 2px dashed #D5CBBF;
+  padding-bottom: 22px;
+  margin-bottom: 30px;
+  text-align: center;
 }
 .board-header h2 { 
   color: #2D5A27; 
-  margin: 0 0 8px 0; 
-  font-size: 28px;
+  margin: 0 0 10px 0; 
+  font-size: 36px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
 }
 .sub-text { 
-  color: #5D5043; 
-  font-size: 15px; 
-  font-weight: bold;
+  color: #7D7162; 
+  font-size: 16px; 
   margin: 0;
 }
 
-/* 폼 스타일 */
-.board-form { background: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E2DCD3; margin-bottom: 20px; }
-.board-form h3 { color: #8B5A2B; margin-top: 0; }
-.board-form input, .board-form textarea { 
-  display: block; width: 100%; margin-bottom: 12px; padding: 12px; 
-  border: 1px solid #CFC7BC; border-radius: 6px; box-sizing: border-box; background: #FAF9F6;
-  font-family: inherit; 
+/* 작성/수정 폼 디자인 */
+.board-form { 
+  background: #FFFFFF; 
+  padding: 30px; 
+  border-radius: 20px; 
+  border: 1px solid #EAE3D9;
+  box-shadow: 0 10px 30px rgba(93, 80, 67, 0.05);
 }
-.board-form textarea { height: 200px; resize: none; }
+.board-form h3 { color: #8B5A2B; margin-top: 0; font-size: 24px; }
+.board-form input, .board-form textarea { 
+  display: block; width: 100%; margin-bottom: 16px; padding: 15px; 
+  border: 1px solid #E2DCD3; border-radius: 12px; box-sizing: border-box; background: #FAF9F6;
+  font-family: inherit; font-size: 15px;
+  transition: all 0.25s ease;
+}
+.board-form input:focus, .board-form textarea:focus {
+  outline: none;
+  border-color: #2D5A27;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 10px rgba(45,90,39,0.12);
+}
+.board-form textarea { height: 180px; resize: none; }
+.form-buttons { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* 🌟 상단 컨트롤 영역 (검색창 & 등록 단추 수평 배치) */
+/* 🔍 컨트롤 영역 (둥근 검색바 & 등록 단추 수평 배치) */
 .board-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  margin-bottom: 15px;
+  margin-bottom: 25px;
 }
 .search-wrapper {
   position: relative;
@@ -298,7 +320,7 @@ const resetForm = () => {
 }
 .search-icon {
   position: absolute;
-  left: 14px;
+  left: 18px;
   top: 50%;
   transform: translateY(-50%);
   color: #8B5A2B;
@@ -306,49 +328,65 @@ const resetForm = () => {
 }
 .search-input {
   width: 100%;
-  padding: 10px 10px 10px 40px;
-  border: 1px solid #CFC7BC;
-  border-radius: 30px; /* 나침반/지도 라운드 느낌 */
+  padding: 13px 13px 13px 48px;
+  border: 1.5px solid #DED7CD;
+  border-radius: 40px; /* 타원형 트렌디 디자인 */
   background-color: #FFFFFF;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   box-sizing: border-box;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.03);
   transition: all 0.25s ease;
 }
 .search-input:focus {
   outline: none;
   border-color: #2D5A27;
-  box-shadow: 0 0 8px rgba(45,90,39,0.15);
+  box-shadow: 0 0 12px rgba(45,90,39,0.15);
 }
 
-/* 테이블 리스트 디자인 */
-.board-list table { width: 100%; border-collapse: collapse; background: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-.board-list th { background-color: #2D5A27; color: white; padding: 14px; font-size: 15px; }
-.board-list td { border-bottom: 1px solid #EAE6DF; padding: 14px; font-size: 15px; color: #333; }
+/* 🌟 대박 트렌디하게 변경된 테이블(표) 디자인 */
+.table-container {
+  background: #FFFFFF;
+  border-radius: 20px; /* 표 전반을 둥글게 */
+  overflow: hidden; /* 모서리가 상하지 않게 깎기 */
+  box-shadow: 0 8px 24px rgba(93, 80, 67, 0.05);
+  border: 1px solid #EAE3D9;
+}
+table { width: 100%; border-collapse: collapse; }
+th { 
+  background: linear-gradient(90deg, #2D5A27 0%, #1E441A 100%); /* 그라데이션 헤더 */
+  color: white; 
+  padding: 18px 16px; 
+  font-size: 17px; 
+  letter-spacing: 0.5px; 
+}
+td { border-bottom: 1px solid #F0ECE6; padding: 18px 16px; font-size: 15px; color: #333; }
 
-/* 🌟 모션 디자인 적용: 테이블 행 마우스 호버 효과 */
+/* 표 행에 적용된 트렌디한 모션 피드백 */
 .table-row-motion {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .table-row-motion:hover {
-  background-color: #F3EFE6 !important;
-  transform: translateY(-2px); /* 부드럽게 위로 떠오르는 지도 레이어 모션 */
-  box-shadow: 0 4px 10px rgba(93,80,67,0.08);
+  background-color: #FAF6EE !important;
+  transform: scale(1.002) translateX(4px); /* 마우스 올리면 은은하게 우측으로 밀림 */
   cursor: pointer;
 }
 
 .text-center { text-align: center !important; }
 .text-left { text-align: left !important; }
-.title-link { color: #2B6CB0; font-weight: bold; }
-.visitor-id { color: #888; font-size: 13px; }
 
-/* 추천 코스 스타일 차별화 */
+/* 링크 스타일 */
+.title-link { color: #2B6CB0; font-weight: bold; transition: color 0.2s; }
+.table-row-motion:hover .title-link { color: #1A365D; }
+.visitor-id { color: #8B5A2B; font-size: 14px; font-weight: bold; }
+.date-col { color: #8E877E; font-size: 14px; }
+
+/* 추천 코스 전용 디자인 (강조) */
 .notice-row {
-  background-color: #EBF4EB !important;
-  border-bottom: 1px solid #C8DFC8;
+  background-color: #F3F8F2 !important;
 }
 .notice-row:hover {
-  background-color: #DCECDC !important;
+  background-color: #E7F1E6 !important;
 }
 .notice-title {
   color: #1E4620;
@@ -357,19 +395,27 @@ const resetForm = () => {
 }
 .badge-notice {
   background-color: #8B5A2B;
-  color: white; padding: 3px 8px; border-radius: 20px; font-size: 12px; font-weight: bold;
+  color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px;
 }
 .badge-notice-detail {
   background-color: #2D5A27;
-  color: white; padding: 4px 10px; border-radius: 20px; font-size: 14px; margin-right: 8px; vertical-align: middle;
+  color: white; padding: 5px 12px; border-radius: 20px; font-size: 14px; margin-right: 8px; vertical-align: middle;
 }
 
-/* 버튼 모음 및 모션 */
-button { padding: 9px 16px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: all 0.2s ease; font-family: inherit; }
-button:hover {
-  transform: scale(1.03); /* 단추가 꾹 눌리기 전 살짝 반응하는 모션 */
+/* 버튼 모음 (한나체 적용 및 부드러운 둥근 탭) */
+button { 
+  padding: 11px 20px; 
+  border-radius: 30px; 
+  border: none; 
+  font-size: 15px; 
+  cursor: pointer; 
+  transition: all 0.25s ease; 
 }
-.btn-write { background-color: #8B5A2B; color: white; box-shadow: 0 2px 6px rgba(139,90,43,0.2); white-space: nowrap; }
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.btn-write { background-color: #8B5A2B; color: white; box-shadow: 0 4px 12px rgba(139,90,43,0.2); white-space: nowrap; }
 .btn-write:hover { background-color: #734A22; }
 .btn-submit { background-color: #2D5A27; color: white; }
 .btn-submit:hover { background-color: #22441D; }
@@ -378,25 +424,31 @@ button:hover {
 .btn-list { background-color: #718096; color: white; }
 
 /* 상세 보기 */
-.board-detail h3 { color: #2D5A27; font-size: 22px; margin-top: 0; }
+.board-detail {
+  background: #FFFFFF;
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid #EAE3D9;
+  box-shadow: 0 10px 30px rgba(93, 80, 67, 0.05);
+}
+.board-detail h3 { color: #2D5A27; font-size: 26px; margin-top: 0; }
 .content-box { 
-  border: 1px solid #E2DCD3; padding: 22px; background-color: #FFFFFF; 
-  min-height: 180px; margin-bottom: 20px; border-radius: 8px;
+  border: 1px solid #EAE6DF; padding: 24px; background-color: #FAF9F6; 
+  min-height: 180px; margin-bottom: 20px; border-radius: 14px;
   white-space: pre-wrap; line-height: 1.8; color: #2D3748; font-size: 16px;
   font-family: inherit;
 }
-.meta { color: #718096; font-size: 13px; margin-bottom: 15px; }
-.no-data { text-align: center; color: #A0AEC0; padding: 30px !important; }
+.meta { color: #8E877E; font-size: 13px; margin-bottom: 15px; }
+.no-data { text-align: center; color: #A0AEC0; padding: 50px !important; }
 
-/* 🌟 화면 보이기 모션: 페이지 전환 시 부드러운 불투명도 컴백 애니메이션 */
+/* 화면 전환 부드러운 페이드인 */
 .animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;

@@ -278,21 +278,57 @@ export async function fetchRegionCurrentWeather(region) {
 
   const response = await fetch(requestUrl)
 
+  const contentType =
+    response.headers.get('content-type') || ''
+
   const rawResponse = await response.text()
+
+  console.log('[WEATHER] 요청 URL:', requestUrl)
+  console.log('[WEATHER] 응답 상태:', response.status)
+  console.log('[WEATHER] Content-Type:', contentType)
+  console.log(
+    '[WEATHER] 원본 응답:',
+    rawResponse.slice(0, 1000),
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `기상청 API 요청에 실패했습니다. (${response.status})`,
+    )
+  }
 
   let result
 
   try {
     result = JSON.parse(rawResponse)
   } catch {
-    throw new Error(
-      `기상청 API가 JSON이 아닌 응답을 반환했습니다. (${response.status})`,
-    )
-  }
+    const preview = rawResponse
+      .slice(0, 200)
+      .replace(/\s+/g, ' ')
+      .trim()
 
-  if (!response.ok) {
+    if (
+      rawResponse.toLowerCase().includes('<!doctype html') ||
+      rawResponse.toLowerCase().includes('<html')
+    ) {
+      throw new Error(
+        '기상청 API 대신 Netlify HTML 페이지가 반환되었습니다. ' +
+          'netlify.toml의 /kma-api 프록시 설정을 확인하세요.',
+      )
+    }
+
+    if (
+      rawResponse.includes('<OpenAPI_ServiceResponse') ||
+      rawResponse.includes('<cmmMsgHeader')
+    ) {
+      throw new Error(
+        `기상청 API 인증 또는 요청 오류입니다. 응답: ${preview}`,
+      )
+    }
+
     throw new Error(
-      `기상청 API 요청에 실패했습니다. (${response.status})`,
+      `기상청 API가 JSON이 아닌 응답을 반환했습니다. ` +
+        `(${response.status}) 응답: ${preview}`,
     )
   }
 

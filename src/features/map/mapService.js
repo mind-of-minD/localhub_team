@@ -1,44 +1,25 @@
-import L from 'leaflet'
+import { loadKakaoMapSdk } from './kakaoMapLoader'
 
-import 'leaflet/dist/leaflet.css'
+const SEOUL_CENTER = {
+  latitude: 37.5665,
+  longitude: 126.978,
+}
 
-import 'leaflet.markercluster'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+let kakao = null
+let activeInfoWindow = null
 
-import 'leaflet-routing-machine'
-import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'
+function isValidCoordinate(place) {
+  const latitude = Number(place?.latitude)
+  const longitude = Number(place?.longitude)
 
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png'
-import markerIconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png'
-
-const defaultMarkerIcon = L.icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIconRetinaUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
-
-L.Marker.prototype.options.icon = defaultMarkerIcon
-
-const SEOUL_BOUNDS = L.latLngBounds(
-  [37.41, 126.76],
-  [37.72, 127.19],
-)
-
-const categoryMarkerClasses = {
-  관광지: 'category-tourism',
-  레포츠: 'category-leports',
-  문화시설: 'category-culture',
-  쇼핑: 'category-shopping',
-  숙박: 'category-accommodation',
-  여행코스: 'category-course',
-  축제공연행사: 'category-festival',
-  음식점: 'category-food',
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= 37.41 &&
+    latitude <= 37.72 &&
+    longitude >= 126.76 &&
+    longitude <= 127.19
+  )
 }
 
 function escapeHtml(value = '') {
@@ -50,95 +31,140 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;')
 }
 
-function createCategoryIcon(category) {
-  const categoryClass =
-    categoryMarkerClasses[category] || 'category-default'
-
-  return L.divIcon({
-    className: 'place-marker-wrapper',
-    html: `
-      <span class="place-marker ${categoryClass}">
-        ${escapeHtml(category.slice(0, 1))}
-      </span>
-    `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  })
-}
-
-function createPopupContent(place) {
+function createInfoWindowContent(place) {
   return `
-    <div style="width:220px;line-height:1.5;">
-      <strong style="display:block;margin-bottom:5px;font-size:15px;">
+    <div
+      style="
+        width: 220px;
+        padding: 12px;
+        line-height: 1.5;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+      "
+    >
+      <strong
+        style="
+          display: block;
+          margin-bottom: 5px;
+          font-size: 15px;
+        "
+      >
         ${escapeHtml(place.title)}
       </strong>
 
-      <div style="margin-bottom:4px;font-size:12px;font-weight:700;">
+      <div
+        style="
+          margin-bottom: 4px;
+          font-size: 12px;
+          font-weight: 700;
+        "
+      >
         ${escapeHtml(place.category)}
       </div>
 
-      <div style="font-size:13px;">
+      <div style="font-size: 13px;">
         ${escapeHtml(place.address)}
       </div>
     </div>
   `
 }
 
-export function createMap(container) {
+/**
+ * 카카오맵을 생성합니다.
+ */
+export async function createMap(container) {
   if (!container) {
     throw new Error('지도를 표시할 요소를 찾지 못했습니다.')
   }
 
-  const map = L.map(container, {
-    center: [37.5665, 126.978],
-    zoom: 11,
-    minZoom: 10,
-    maxZoom: 18,
-    maxBounds: SEOUL_BOUNDS,
-    maxBoundsViscosity: 1,
+  kakao = await loadKakaoMapSdk()
+
+  const center = new kakao.maps.LatLng(
+    SEOUL_CENTER.latitude,
+    SEOUL_CENTER.longitude,
+  )
+
+  const map = new kakao.maps.Map(container, {
+    center,
+    level: 8,
   })
 
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    minZoom: 10,
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors',
-  }).addTo(map)
+  // 지도 확대/축소 컨트롤
+  const zoomControl = new kakao.maps.ZoomControl()
+
+  map.addControl(
+    zoomControl,
+    kakao.maps.ControlPosition.RIGHT,
+  )
 
   return map
 }
 
+/**
+ * 카카오맵 마커 클러스터를 생성합니다.
+ */
 export function createMarkerCluster(map) {
-  const markerCluster = L.markerClusterGroup({
-    chunkedLoading: true,
-    removeOutsideVisibleBounds: true,
-    showCoverageOnHover: false,
+  if (!kakao?.maps) {
+    throw new Error('카카오맵 SDK가 준비되지 않았습니다.')
+  }
+
+  return new kakao.maps.MarkerClusterer({
+    map,
+    averageCenter: true,
+    minLevel: 7,
+    disableClickZoom: false,
   })
-
-  map.addLayer(markerCluster)
-
-  return markerCluster
 }
 
+/**
+ * 시설 마커를 지도에 표시합니다.
+ */
 export function renderPlaceMarkers(
   map,
   markerCluster,
   places,
   onSelectPlace,
 ) {
-  markerCluster.clearLayers()
+  if (!map || !markerCluster) {
+    return
+  }
 
-  const markers = places.map((place) => {
-    const marker = L.marker(
-      [place.latitude, place.longitude],
-      {
-        title: place.title,
-        icon: createCategoryIcon(place.category),
-      },
+  markerCluster.clear()
+
+  if (activeInfoWindow) {
+    activeInfoWindow.close()
+    activeInfoWindow = null
+  }
+
+  const validPlaces = places.filter(isValidCoordinate)
+  const bounds = new kakao.maps.LatLngBounds()
+
+  const markers = validPlaces.map((place) => {
+    const position = new kakao.maps.LatLng(
+      Number(place.latitude),
+      Number(place.longitude),
     )
 
-    marker.bindPopup(createPopupContent(place))
+    const marker = new kakao.maps.Marker({
+      position,
+      title: place.title,
+      clickable: true,
+    })
 
-    marker.on('click', () => {
+    bounds.extend(position)
+
+    kakao.maps.event.addListener(marker, 'click', () => {
+      if (activeInfoWindow) {
+        activeInfoWindow.close()
+      }
+
+      activeInfoWindow = new kakao.maps.InfoWindow({
+        content: createInfoWindowContent(place),
+        removable: true,
+      })
+
+      activeInfoWindow.open(map, marker)
+
       if (typeof onSelectPlace === 'function') {
         onSelectPlace(place)
       }
@@ -147,101 +173,132 @@ export function renderPlaceMarkers(
     return marker
   })
 
-  markerCluster.addLayers(markers)
+  markerCluster.addMarkers(markers)
 
-  if (places.length > 0) {
-    const bounds = markerCluster.getBounds()
+  if (markers.length === 0) {
+    map.setCenter(
+      new kakao.maps.LatLng(
+        SEOUL_CENTER.latitude,
+        SEOUL_CENTER.longitude,
+      ),
+    )
 
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, {
-        padding: [20, 20],
-        maxZoom: 13,
-      })
-    }
-  } else {
-    map.setView([37.5665, 126.978], 11)
-  }
-}
-
-export function focusPlace(map, place) {
-  if (!map || !place) {
+    map.setLevel(8)
     return
   }
 
-  map.setView(
-    [place.latitude, place.longitude],
-    15,
-    {
-      animate: true,
-    },
-  )
+  if (markers.length === 1) {
+    map.setCenter(markers[0].getPosition())
+    map.setLevel(5)
+    return
+  }
+
+  map.setBounds(bounds)
+
+  // 시설이 적을 때 지나치게 확대되는 것을 방지
+  if (map.getLevel() < 4) {
+    map.setLevel(4)
+  }
 }
 
+/**
+ * 선택한 시설로 지도를 이동합니다.
+ */
+export function focusPlace(map, place) {
+  if (!map || !place || !isValidCoordinate(place)) {
+    return
+  }
+
+  const position = new kakao.maps.LatLng(
+    Number(place.latitude),
+    Number(place.longitude),
+  )
+
+  map.panTo(position)
+  map.setLevel(4)
+}
+
+/**
+ * 선택된 시설들을 직선으로 연결합니다.
+ *
+ * 카카오맵 JavaScript SDK 자체는 자동차 도로 경로를 계산하지 않으므로
+ * 현재 단계에서는 선택 순서에 따라 Polyline으로 연결합니다.
+ */
 export function drawRoute(
   map,
   places,
-  previousRoutingControl = null,
+  previousPolyline = null,
 ) {
   if (!map) {
     throw new Error('지도 객체가 준비되지 않았습니다.')
   }
 
-  if (places.length < 2) {
-    throw new Error('경로를 표시하려면 시설을 2개 이상 선택하세요.')
+  const validPlaces = places.filter(isValidCoordinate)
+
+  if (validPlaces.length < 2) {
+    throw new Error(
+      '경로를 표시하려면 시설을 2개 이상 선택하세요.',
+    )
   }
 
-  if (previousRoutingControl) {
-    map.removeControl(previousRoutingControl)
+  if (previousPolyline) {
+    previousPolyline.setMap(null)
   }
 
-  const waypoints = places.map((place) =>
-    L.latLng(place.latitude, place.longitude),
+  const path = validPlaces.map(
+    (place) =>
+      new kakao.maps.LatLng(
+        Number(place.latitude),
+        Number(place.longitude),
+      ),
   )
 
-  const routingControl = L.Routing.control({
-    waypoints,
-
-    router: L.Routing.osrmv1({
-      serviceUrl: 'https://router.project-osrm.org/route/v1',
-      profile: 'driving',
-    }),
-
-    routeWhileDragging: false,
-    addWaypoints: false,
-    draggableWaypoints: false,
-    fitSelectedRoutes: true,
-    showAlternatives: false,
-
-    // 기존 시설 마커와 중복되는 출발·도착 마커를 만들지 않음
-    createMarker: () => null,
-
-    lineOptions: {
-      styles: [
-        {
-          weight: 6,
-          opacity: 0.85,
-        },
-      ],
-      extendToWaypoints: true,
-      missingRouteTolerance: 0,
-    },
+  const polyline = new kakao.maps.Polyline({
+    path,
+    strokeWeight: 6,
+    strokeColor: '#2563eb',
+    strokeOpacity: 0.85,
+    strokeStyle: 'solid',
   })
 
-  routingControl.addTo(map)
+  polyline.setMap(map)
 
-  return routingControl
+  const bounds = new kakao.maps.LatLngBounds()
+
+  path.forEach((position) => {
+    bounds.extend(position)
+  })
+
+  map.setBounds(bounds)
+
+  return polyline
 }
 
-export function removeRoute(map, routingControl) {
-  if (!map || !routingControl) {
+/**
+ * 지도에서 경로선을 제거합니다.
+ */
+export function removeRoute(map, polyline) {
+  if (!map || !polyline) {
     return
   }
 
-  map.removeControl(routingControl)
+  polyline.setMap(null)
 }
 
+/**
+ * 지도 관련 객체를 정리합니다.
+ */
 export function destroyMap(map) {
-  if (map) {
-    map.remove()
+  if (activeInfoWindow) {
+    activeInfoWindow.close()
+    activeInfoWindow = null
   }
+
+  const container = map?.getNode?.()
+
+  if (container) {
+    container.innerHTML = ''
+  }
+
+  kakao = null
 }

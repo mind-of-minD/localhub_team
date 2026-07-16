@@ -193,7 +193,7 @@ async function initializeMapPage() {
 
     await nextTick()
 
-    map = createMap(mapContainer.value)
+    map = await createMap(mapContainer.value)
     markerCluster = createMarkerCluster(map)
 
     renderCurrentMarkers()

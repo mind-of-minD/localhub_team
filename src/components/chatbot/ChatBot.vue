@@ -27,6 +27,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { askGPT } from '../../services/openai'
 import ChatWindow from './ChatWindow.vue'
 
 const STORAGE_KEY = 'localhub_chat_history'
@@ -77,6 +78,9 @@ const messages = ref(loadHistory())
 
 onMounted(loadLocalData)
 
+/**
+ * localStorage에 저장된 기존 대화 기록을 불러옵니다.
+ */
 function loadHistory() {
   try {
     const savedHistory = localStorage.getItem(STORAGE_KEY)
@@ -87,20 +91,41 @@ function loadHistory() {
 
     const parsedHistory = JSON.parse(savedHistory)
 
-    return Array.isArray(parsedHistory) && parsedHistory.length > 0
-      ? parsedHistory
-      : [{ ...DEFAULT_MESSAGE }]
+    if (
+      !Array.isArray(parsedHistory) ||
+      parsedHistory.length === 0
+    ) {
+      return [{ ...DEFAULT_MESSAGE }]
+    }
+
+    return parsedHistory.filter(message => {
+      return (
+        message &&
+        ['user', 'assistant', 'system'].includes(
+          message.role,
+        ) &&
+        typeof message.content === 'string'
+      )
+    })
   } catch (error) {
-    console.error('채팅 기록을 불러오지 못했습니다.', error)
+    console.error(
+      '채팅 기록을 불러오지 못했습니다.',
+      error,
+    )
+
     return [{ ...DEFAULT_MESSAGE }]
   }
 }
 
+/**
+ * public/data/seoul 아래의 서울 공공데이터를 불러옵니다.
+ */
 async function loadLocalData() {
   try {
     const loadedFiles = await Promise.all(
       DATA_FILES.map(async file => {
         const encodedFileName = encodeURIComponent(file.path)
+
         const response = await fetch(
           `/data/seoul/${encodedFileName}`,
         )
@@ -130,6 +155,8 @@ async function loadLocalData() {
   } catch (error) {
     console.error(error)
 
+    dataLoaded.value = false
+
     addMessage(
       'system',
       `지역 데이터를 불러오지 못했습니다. ${error.message}`,
@@ -137,26 +164,32 @@ async function loadLocalData() {
   }
 }
 
+/**
+ * JSON 파일마다 다른 배열 구조를 하나로 처리합니다.
+ */
 function extractItems(json) {
   if (Array.isArray(json)) {
     return json
   }
 
-  if (Array.isArray(json.items)) {
+  if (Array.isArray(json?.items)) {
     return json.items
   }
 
-  if (Array.isArray(json.data)) {
+  if (Array.isArray(json?.data)) {
     return json.data
   }
 
-  if (Array.isArray(json.response?.body?.items?.item)) {
+  if (Array.isArray(json?.response?.body?.items?.item)) {
     return json.response.body.items.item
   }
 
   return []
 }
 
+/**
+ * 검색 비교를 위해 문자열을 정규화합니다.
+ */
 function normalizeText(value) {
   return String(value ?? '')
     .toLowerCase()
@@ -165,26 +198,36 @@ function normalizeText(value) {
     .trim()
 }
 
+/**
+ * 데이터 한 건에서 검색에 사용할 문자열을 생성합니다.
+ */
 function getSearchableText(item) {
-  return normalizeText([
-    item.title,
-    item.name,
-    item.addr1,
-    item.addr2,
-    item.overview,
-    item.summary,
-    item.description,
-    item.tel,
-    item.eventstartdate,
-    item.eventenddate,
-    item._category,
-  ].join(' '))
+  return normalizeText(
+    [
+      item.title,
+      item.name,
+      item.addr1,
+      item.addr2,
+      item.overview,
+      item.summary,
+      item.description,
+      item.tel,
+      item.eventstartdate,
+      item.eventenddate,
+      item._category,
+    ].join(' '),
+  )
 }
 
+/**
+ * 사용자 질문과 관련성이 높은 지역 데이터를 찾습니다.
+ */
 function rankDocuments(query, topK = 7) {
   const normalizedQuery = normalizeText(query)
 
-  if (!normalizedQuery) return []
+  if (!normalizedQuery) {
+    return []
+  }
 
   const queryTokens = [
     ...new Set(
@@ -197,6 +240,14 @@ function rankDocuments(query, topK = 7) {
   return localData.value
     .map(item => {
       const text = getSearchableText(item)
+      const title = normalizeText(
+        item.title || item.name,
+      )
+      const address = normalizeText(
+        [item.addr1, item.addr2].join(' '),
+      )
+      const category = normalizeText(item._category)
+
       let score = 0
 
       if (text.includes(normalizedQuery)) {
@@ -208,17 +259,15 @@ function rankDocuments(query, topK = 7) {
           score += 2
         }
 
-        if (
-          normalizeText(item.title || item.name).includes(token)
-        ) {
+        if (title.includes(token)) {
           score += 4
         }
 
-        if (normalizeText(item.addr1).includes(token)) {
+        if (address.includes(token)) {
           score += 3
         }
 
-        if (normalizeText(item._category).includes(token)) {
+        if (category.includes(token)) {
           score += 3
         }
       }
@@ -229,19 +278,31 @@ function rankDocuments(query, topK = 7) {
       }
     })
     .filter(result => result.score > 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((first, second) => second.score - first.score)
     .slice(0, topK)
     .map(result => result.item)
 }
 
+/**
+ * YYYYMMDD 형식 날짜를 YYYY-MM-DD로 변환합니다.
+ */
 function formatDate(value) {
   const date = String(value ?? '')
 
-  if (!/^\d{8}$/.test(date)) return date
+  if (!/^\d{8}$/.test(date)) {
+    return date
+  }
 
-  return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`
+  return [
+    date.slice(0, 4),
+    date.slice(4, 6),
+    date.slice(6, 8),
+  ].join('-')
 }
 
+/**
+ * 검색된 지역 데이터를 AI에 전달할 텍스트로 변환합니다.
+ */
 function buildContext(documents) {
   if (documents.length === 0) {
     return '사용자 질문과 직접 일치하는 제공 데이터가 없습니다.'
@@ -249,22 +310,38 @@ function buildContext(documents) {
 
   return documents
     .map((item, index) => {
-      const title = item.title || item.name || '이름 없음'
-      const address = item.addr1 || item.addr2 || '주소 정보 없음'
+      const title =
+        item.title || item.name || '이름 없음'
+
+      const address =
+        [item.addr1, item.addr2]
+          .filter(Boolean)
+          .join(' ') || '주소 정보 없음'
+
       const description =
         item.overview ||
         item.summary ||
         item.description ||
         '상세 설명 없음'
 
-      const startDate = formatDate(item.eventstartdate)
-      const endDate = formatDate(item.eventenddate)
+      const startDate = formatDate(
+        item.eventstartdate,
+      )
+
+      const endDate = formatDate(
+        item.eventenddate,
+      )
+
+      const telephone = item.tel
+        ? `전화번호: ${item.tel}`
+        : ''
 
       return [
         `[${index + 1}]`,
         `이름: ${title}`,
         `분류: ${item._category || '분류 없음'}`,
         `주소: ${address}`,
+        telephone,
         startDate ? `시작일: ${startDate}` : '',
         endDate ? `종료일: ${endDate}` : '',
         `설명: ${String(description).slice(0, 500)}`,
@@ -275,12 +352,31 @@ function buildContext(documents) {
     .join('\n\n')
 }
 
-function createApiMessages(question, documents) {
-  const recentHistory = messages.value
-    .filter(message =>
+/**
+ * 현재 질문을 제외한 최근 대화 기록을 가져옵니다.
+ */
+function getRecentHistory() {
+  const conversation = messages.value.filter(
+    message =>
       ['user', 'assistant'].includes(message.role),
-    )
+  )
+
+  // sendMessage에서 현재 사용자 질문을 먼저 추가하므로,
+  // 마지막 사용자 메시지는 기존 기록에서 제외합니다.
+  return conversation
+    .slice(0, -1)
     .slice(-8)
+    .map(message => ({
+      role: message.role,
+      content: message.content,
+    }))
+}
+
+/**
+ * OpenAI에 전달할 대화 메시지를 생성합니다.
+ */
+function createApiMessages(question, documents) {
+  const recentHistory = getRecentHistory()
 
   return [
     {
@@ -289,12 +385,14 @@ function createApiMessages(question, documents) {
 당신은 서울 지역 정보 공유 서비스 LocalHub의 안내 챗봇입니다.
 
 규칙:
-1. 아래에 제공된 지역 데이터에 근거하여 답변하세요.
-2. 제공된 데이터에 없는 구체적인 사실을 임의로 만들지 마세요.
-3. 장소를 추천할 때 이름, 분류, 주소를 명확하게 표시하세요.
-4. 질문과 일치하는 데이터가 없으면 제공 데이터에서 확인되지 않는다고 안내하세요.
-5. 답변은 한국어로 작성하세요.
-6. 너무 길지 않게 핵심 내용을 정리하세요.
+1. 제공된 LocalHub 지역 데이터에 근거하여 답변하세요.
+2. 데이터에 없는 구체적인 사실을 임의로 만들지 마세요.
+3. 장소를 추천할 때 장소 이름, 분류, 주소를 명확하게 표시하세요.
+4. 사용자의 조건에 맞는 장소가 여러 개라면 최대 5개까지만 추천하세요.
+5. 질문과 일치하는 데이터가 없으면 제공 데이터에서 확인되지 않는다고 안내하세요.
+6. 사용자가 추가 질문을 하면 이전 대화 맥락을 참고하세요.
+7. 답변은 이해하기 쉬운 한국어로 작성하세요.
+8. 답변은 지나치게 길게 작성하지 말고 핵심 내용을 정리하세요.
       `.trim(),
     },
 
@@ -317,91 +415,91 @@ ${question}
   ]
 }
 
-async function callOpenAI(apiMessages, originalQuestion) {
+/**
+ * 모의 API 또는 실제 백엔드 챗봇 API를 호출합니다.
+ */
+async function callOpenAI(
+  apiMessages,
+  originalQuestion,
+) {
   const useMock =
     import.meta.env.VITE_USE_MOCK_API === 'true'
 
   if (useMock) {
-    return createMockResponse(originalQuestion)
-  }
-
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-
-  if (!apiKey) {
-    throw new Error(
-      'VITE_OPENAI_API_KEY가 설정되지 않았습니다.',
+    return createMockResponse(
+      originalQuestion,
+      apiMessages,
     )
   }
 
-  const response = await fetch(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      method: 'POST',
-
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-
-      body: JSON.stringify({
-        model: 'gpt-5-mini',
-        messages: apiMessages,
-        max_completion_tokens: 700,
-      }),
-    },
-  )
-
-  if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => null)
-
-    const errorMessage =
-      errorData?.error?.message ||
-      `OpenAI API 요청 실패 (${response.status})`
-
-    throw new Error(errorMessage)
-  }
-
-  const data = await response.json()
-
-  return (
-    data.choices?.[0]?.message?.content ||
-    '응답 내용을 확인할 수 없습니다.'
-  )
+  return askGPT(apiMessages)
 }
 
-function createMockResponse(question) {
+/**
+ * OpenAI API를 사용하지 않고 UI를 시험할 때 반환할 답변입니다.
+ */
+function createMockResponse(question, apiMessages) {
+  const contextMessage = apiMessages.find(
+    message =>
+      message.role === 'user' &&
+      message.content.includes('<지역 데이터>'),
+  )
+
+  const hasSearchResult =
+    contextMessage &&
+    !contextMessage.content.includes(
+      '사용자 질문과 직접 일치하는 제공 데이터가 없습니다.',
+    )
+
+  if (!hasSearchResult) {
+    return [
+      '현재 모의 API 모드입니다.',
+      '',
+      `"${question}"과 직접 일치하는 지역 데이터를 찾지 못했습니다.`,
+      '',
+      '실제 AI 답변을 사용하려면 .env에서',
+      'VITE_USE_MOCK_API=false로 변경하세요.',
+    ].join('\n')
+  }
+
   return [
     '현재 모의 API 모드입니다.',
     '',
     `입력한 질문: ${question}`,
     '',
-    '실제 OpenAI 응답을 사용하려면 .env에서',
+    '질문과 관련된 서울 지역 데이터를 찾았습니다.',
+    '실제 AI 답변을 사용하려면 .env에서',
     'VITE_USE_MOCK_API=false로 변경하세요.',
   ].join('\n')
 }
 
+/**
+ * 사용자가 입력한 질문을 처리합니다.
+ */
 async function sendMessage() {
   const question = userInput.value.trim()
 
-  if (!question || loading.value) return
-
-  addMessage('user', question)
-  userInput.value = ''
+  if (!question || loading.value) {
+    return
+  }
 
   if (!dataLoaded.value) {
     addMessage(
       'system',
-      '지역 데이터를 아직 불러오는 중입니다. 잠시 후 다시 질문해 주세요.',
+      '지역 데이터를 아직 불러오지 못했습니다. 잠시 후 다시 질문해 주세요.',
     )
+
     return
   }
 
+  addMessage('user', question)
+
+  userInput.value = ''
   loading.value = true
 
   try {
     const documents = rankDocuments(question)
+
     const apiMessages = createApiMessages(
       question,
       documents,
@@ -414,7 +512,10 @@ async function sendMessage() {
 
     addMessage('assistant', answer)
   } catch (error) {
-    console.error(error)
+    console.error(
+      '챗봇 요청 중 오류가 발생했습니다.',
+      error,
+    )
 
     addMessage(
       'system',
@@ -425,15 +526,37 @@ async function sendMessage() {
   }
 }
 
+/**
+ * 새 메시지를 추가하고 localStorage에 저장합니다.
+ */
 function addMessage(role, content) {
+  if (
+    !['user', 'assistant', 'system'].includes(role)
+  ) {
+    console.error(
+      `지원하지 않는 메시지 역할입니다: ${role}`,
+    )
+
+    return
+  }
+
+  const normalizedContent = String(content ?? '').trim()
+
+  if (!normalizedContent) {
+    return
+  }
+
   messages.value.push({
     role,
-    content,
+    content: normalizedContent,
   })
 
   saveHistory()
 }
 
+/**
+ * 대화 기록을 localStorage에 저장합니다.
+ */
 function saveHistory() {
   try {
     localStorage.setItem(
@@ -445,8 +568,13 @@ function saveHistory() {
   }
 }
 
+/**
+ * 대화를 초기 상태로 되돌립니다.
+ */
 function clearHistory() {
   messages.value = [{ ...DEFAULT_MESSAGE }]
+  userInput.value = ''
+
   saveHistory()
 }
 </script>
@@ -480,6 +608,11 @@ function clearHistory() {
 .floating-button:hover {
   transform: translateY(-3px);
   box-shadow: 0 14px 32px rgb(37 99 235 / 42%);
+}
+
+.floating-button:focus-visible {
+  outline: 3px solid rgb(37 99 235 / 35%);
+  outline-offset: 3px;
 }
 
 .chat-icon {

@@ -582,8 +582,8 @@ function clearHistory() {
 <style scoped>
 .chatbot {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: 22px;
+  bottom: 22px;
   z-index: 2000;
 }
 
@@ -592,26 +592,32 @@ function clearHistory() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+
+  width: 66px;
+  height: 66px;
+
   color: #ffffff;
-  background: #2563eb;
-  border: 0;
+  background: var(--color-primary);
+  border: 3px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 10px 28px rgb(37 99 235 / 35%);
+
+  box-shadow: var(--shadow-floating);
   cursor: pointer;
+
   transition:
     transform 0.2s ease,
+    background 0.2s ease,
     box-shadow 0.2s ease;
 }
 
 .floating-button:hover {
+  background: var(--color-primary-dark);
   transform: translateY(-3px);
-  box-shadow: 0 14px 32px rgb(37 99 235 / 42%);
+  box-shadow: 0 18px 42px rgb(45 90 39 / 30%);
 }
 
 .floating-button:focus-visible {
-  outline: 3px solid rgb(37 99 235 / 35%);
+  outline: 3px solid rgb(45 90 39 / 24%);
   outline-offset: 3px;
 }
 
@@ -621,9 +627,9 @@ function clearHistory() {
 }
 
 .button-label {
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .chat-panel-enter-active,

@@ -99,39 +99,62 @@ const emit = defineEmits(['add-to-route', 'close'])
 .place-card {
   overflow: hidden;
   width: 320px;
-  border: 1px solid #d4d4d4;
-  border-radius: 10px;
-  background: white;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-card);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 0;
+
+  padding: 15px 16px 0;
 }
 
 .category-badge {
-  padding: 4px 9px;
-  border: 1px solid #aaa;
-  border-radius: 999px;
+  padding: 5px 11px;
+
+  color: var(--color-secondary-dark);
+  background: var(--color-secondary-soft);
+  border: 1px solid #e0cbb6;
+  border-radius: var(--radius-pill);
+
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .close-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
   border: 0;
-  background: transparent;
+  border-radius: 50%;
+
   font-size: 24px;
   cursor: pointer;
 }
 
+.close-button:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
 .place-image,
 .image-placeholder {
-  width: calc(100% - 28px);
+  width: calc(100% - 32px);
   height: 180px;
-  margin: 12px 14px 0;
-  border-radius: 8px;
+  margin: 13px 16px 0;
+
+  border-radius: var(--radius-medium);
 }
 
 .place-image {
@@ -142,53 +165,85 @@ const emit = defineEmits(['add-to-route', 'close'])
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #ddd;
+
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  border: 1px dashed var(--color-border-strong);
 }
 
 .place-card h2 {
-  margin: 16px 14px 12px;
-  font-size: 20px;
+  margin: 17px 16px 13px;
+  color: var(--color-primary);
+  font-size: 21px;
+  line-height: 1.4;
 }
 
 .place-information {
-  margin: 0 14px;
+  margin: 0 16px;
 }
 
 .place-information div {
-  margin-bottom: 11px;
+  margin-bottom: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #f0ece6;
+}
+
+.place-information div:last-child {
+  border-bottom: 0;
 }
 
 .place-information dt {
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  color: var(--color-secondary);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .place-information dd {
   margin: 0;
-  line-height: 1.5;
+  color: var(--color-text);
+  line-height: 1.55;
 }
 
 .route-add-button {
-  width: calc(100% - 28px);
-  margin: 6px 14px 14px;
-  padding: 11px;
-  border: 1px solid #888;
-  border-radius: 7px;
+  width: calc(100% - 32px);
+  margin: 7px 16px 16px;
+  padding: 12px;
+
+  color: #ffffff;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-pill);
+
+  font-weight: 800;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.route-add-button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-small);
 }
 
 .route-add-button:disabled {
+  color: #8e877e;
+  background: #e7e1d8;
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .empty-detail {
   display: flex;
-  min-height: 200px;
+  min-height: 220px;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+
+  padding: 24px;
+
+  color: var(--color-text-muted);
   text-align: center;
 }
 

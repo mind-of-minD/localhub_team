@@ -48,36 +48,41 @@ const roleLabel = computed(() => {
 }
 
 .message-bubble {
-  max-width: 82%;
-  padding: 10px 13px;
-  border-radius: 14px;
-  line-height: 1.5;
+  max-width: 84%;
+  padding: 11px 14px;
+
+  border-radius: 16px;
+  line-height: 1.55;
   overflow-wrap: anywhere;
+
+  box-shadow: 0 3px 10px rgb(83 70 55 / 6%);
 }
 
 .user .message-bubble {
   color: #ffffff;
-  background: #2563eb;
-  border-bottom-right-radius: 4px;
+  background: var(--color-primary);
+  border-bottom-right-radius: 5px;
 }
 
 .assistant .message-bubble {
-  color: #1f2937;
-  background: #f1f5f9;
-  border-bottom-left-radius: 4px;
+  color: var(--color-text);
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: 5px;
 }
 
 .system .message-bubble {
-  color: #991b1b;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
+  color: var(--color-danger-dark);
+  background: var(--color-danger-soft);
+  border: 1px solid #edcaca;
 }
 
 .message-label {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   opacity: 0.75;
 }
 

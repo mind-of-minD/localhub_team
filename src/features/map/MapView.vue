@@ -393,8 +393,22 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .map-page {
-  width: 100%;
-  padding: 20px;
+  width: min(1180px, calc(100% - 32px));
+  margin: 40px auto;
+  padding: 32px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fdfbfa 0%,
+      #f4f0e6 100%
+    );
+
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 28px;
+  box-shadow:
+    16px 16px 48px #e0dad0,
+    -16px -16px 48px #ffffff;
 }
 
 .map-header {
@@ -402,32 +416,55 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 16px;
+
+  margin-bottom: 26px;
+  padding-bottom: 22px;
+  border-bottom: 2px dashed #d5cbbf;
 }
 
 .map-header h1 {
-  margin: 0 0 6px;
-  font-size: 26px;
+  margin: 0 0 8px;
+  color: var(--color-primary);
+  font-size: 32px;
+  line-height: 1.25;
 }
 
 .map-header p {
   margin: 0;
+  color: var(--color-text-muted);
+  font-size: 15px;
 }
 
-.status-message,
-.error-message {
-  margin: 12px 0;
+.status-message {
+  margin: 14px 0;
+  padding: 13px 16px;
+
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: 1px solid #cfdfcc;
+  border-radius: var(--radius-medium);
 }
 
 .error-message {
+  margin: 14px 0;
+  padding: 13px 16px;
+
+  color: var(--color-danger-dark);
+  background: var(--color-danger-soft);
+  border: 1px solid #efcaca;
+  border-radius: var(--radius-medium);
+
   font-weight: 700;
 }
 
 .warning-panel {
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+
+  color: #725329;
+  background: #fff9ed;
+  border: 1px solid #ead9b5;
+  border-radius: var(--radius-medium);
 }
 
 .warning-panel summary {
@@ -436,15 +473,18 @@ onBeforeUnmount(() => {
 }
 
 .warning-panel ul {
-  margin-bottom: 0;
+  margin: 12px 0 0;
+  padding-left: 22px;
 }
 
 .route-panel {
-  margin-bottom: 16px;
-  padding: 16px;
-  border: 1px solid #d5d5d5;
-  border-radius: 10px;
-  background: white;
+  margin-bottom: 20px;
+  padding: 22px;
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-small);
 }
 
 .route-panel-header {
@@ -455,12 +495,14 @@ onBeforeUnmount(() => {
 }
 
 .route-panel-header h2 {
-  margin: 0 0 5px;
-  font-size: 19px;
+  margin: 0 0 6px;
+  color: var(--color-primary);
+  font-size: 21px;
 }
 
 .route-panel-header p {
   margin: 0;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -472,21 +514,48 @@ onBeforeUnmount(() => {
 
 .route-actions button,
 .route-item-actions button {
-  padding: 7px 11px;
-  border: 1px solid #aaa;
-  border-radius: 6px;
+  padding: 9px 14px;
+
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+
+  font-weight: 700;
   cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
+.route-actions button:first-child {
+  color: #ffffff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.route-actions button:hover,
+.route-item-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-small);
+}
+
+.route-actions button:first-child:hover {
+  background: var(--color-primary-dark);
+}
+
+.route-actions button:disabled,
 .route-item-actions button:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+  opacity: 0.45;
 }
 
 .route-list {
   display: grid;
-  gap: 8px;
-  margin: 16px 0 0;
+  gap: 9px;
+
+  margin: 18px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -494,22 +563,30 @@ onBeforeUnmount(() => {
 .route-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  gap: 11px;
+
+  padding: 11px 12px;
+
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
 }
 
 .route-number {
   display: inline-flex;
-  width: 28px;
-  height: 28px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border: 1px solid #888;
+
+  width: 30px;
+  height: 30px;
+
+  color: #ffffff;
+  background: var(--color-secondary);
   border-radius: 50%;
-  font-weight: 700;
+
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .route-place-information {
@@ -521,12 +598,14 @@ onBeforeUnmount(() => {
 
 .route-place-information strong {
   overflow: hidden;
+  color: var(--color-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .route-place-information small {
   margin-top: 3px;
+  color: var(--color-text-muted);
 }
 
 .route-item-actions {
@@ -534,14 +613,20 @@ onBeforeUnmount(() => {
   gap: 5px;
 }
 
+.route-item-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .empty-route-message {
-  margin: 14px 0 0;
+  margin: 15px 0 0;
+  color: var(--color-text-muted);
 }
 
 .map-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 16px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -549,11 +634,14 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 70vh;
   min-height: 580px;
-  border: 1px solid #d5d5d5;
-  border-radius: 10px;
+
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-card);
 }
 
-/* mapService.js에서 만든 커스텀 마커 */
 :deep(.place-marker-wrapper) {
   border: 0;
   background: transparent;
@@ -561,54 +649,63 @@ onBeforeUnmount(() => {
 
 :deep(.place-marker) {
   display: flex;
-  width: 32px;
-  height: 32px;
   align-items: center;
   justify-content: center;
-  border: 2px solid white;
+
+  width: 34px;
+  height: 34px;
+
+  border: 3px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 2px 7px rgb(0 0 0 / 35%);
+  box-shadow: 0 3px 9px rgb(65 53 39 / 30%);
+
   font-size: 13px;
   font-weight: 800;
 }
 
 :deep(.category-tourism) {
-  background: #ffd166;
+  background: #e6b85c;
 }
 
 :deep(.category-leports) {
-  background: #81b29a;
+  background: #7aaa75;
 }
 
 :deep(.category-culture) {
-  background: #cdb4db;
+  background: #b89ac4;
 }
 
 :deep(.category-shopping) {
-  background: #ffafcc;
+  background: #d69d9d;
 }
 
 :deep(.category-accommodation) {
-  background: #90caf9;
+  background: #8baec2;
 }
 
 :deep(.category-course) {
-  background: #a8dadc;
+  background: #88b5af;
 }
 
 :deep(.category-festival) {
-  background: #f4a261;
+  background: #d9935e;
 }
 
 :deep(.category-food) {
-  background: #e76f51;
+  background: #c97655;
 }
 
 :deep(.category-default) {
-  background: #ddd;
+  background: #bcb4aa;
 }
 
 @media (max-width: 900px) {
+  .map-page {
+    width: min(100% - 24px, 760px);
+    margin: 24px auto;
+    padding: 22px;
+  }
+
   .map-header,
   .route-panel-header {
     align-items: stretch;
@@ -620,14 +717,22 @@ onBeforeUnmount(() => {
   }
 
   .map-container {
-    height: 65vh;
+    height: 62vh;
     min-height: 480px;
   }
 }
 
 @media (max-width: 600px) {
   .map-page {
-    padding: 12px;
+    width: calc(100% - 16px);
+    margin: 12px auto;
+    padding: 15px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .map-header h1 {
+    font-size: 26px;
   }
 
   .route-actions {

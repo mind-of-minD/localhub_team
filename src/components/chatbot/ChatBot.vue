@@ -121,14 +121,26 @@ function loadHistory() {
  * public/data/seoul 아래의 서울 공공데이터를 불러옵니다.
  */
 async function loadLocalData() {
+  console.groupCollapsed(
+    '[CHAT DEBUG] 지역 데이터 로딩',
+  )
+
   try {
     const loadedFiles = await Promise.all(
       DATA_FILES.map(async file => {
-        const encodedFileName = encodeURIComponent(file.path)
+        const encodedFileName =
+          encodeURIComponent(file.path)
 
-        const response = await fetch(
-          `/data/seoul/${encodedFileName}`,
+        const url =
+          `/data/seoul/${encodedFileName}`
+
+        const startedAt = performance.now()
+
+        console.log(
+          `[CHAT DEBUG] 파일 요청: ${url}`,
         )
+
+        const response = await fetch(url)
 
         if (!response.ok) {
           throw new Error(
@@ -138,6 +150,22 @@ async function loadLocalData() {
 
         const json = await response.json()
         const items = extractItems(json)
+
+        console.table({
+          file: file.path,
+          category: file.category,
+          itemCount: items.length,
+          durationMs: Math.round(
+            performance.now() - startedAt,
+          ),
+        })
+
+        if (items.length === 0) {
+          console.warn(
+            `[CHAT DEBUG] ${file.path}에서 배열 데이터를 찾지 못했습니다.`,
+            json,
+          )
+        }
 
         return items.map(item => ({
           ...item,
@@ -150,10 +178,13 @@ async function loadLocalData() {
     dataLoaded.value = true
 
     console.log(
-      `LocalHub 데이터 ${localData.value.length}건 로드 완료`,
+      `[CHAT DEBUG] 전체 데이터 ${localData.value.length}건 로드 완료`,
     )
   } catch (error) {
-    console.error(error)
+    console.error(
+      '[CHAT DEBUG] 데이터 로딩 실패:',
+      error,
+    )
 
     dataLoaded.value = false
 
@@ -161,6 +192,8 @@ async function loadLocalData() {
       'system',
       `지역 데이터를 불러오지 못했습니다. ${error.message}`,
     )
+  } finally {
+    console.groupEnd()
   }
 }
 
@@ -483,46 +516,186 @@ async function sendMessage() {
     return
   }
 
-  if (!dataLoaded.value) {
-    addMessage(
-      'system',
-      '지역 데이터를 아직 불러오지 못했습니다. 잠시 후 다시 질문해 주세요.',
-    )
+  console.groupCollapsed(
+    `%c[CHAT DEBUG] 질문 처리: ${question}`,
+    'color: #8b5a2b; font-weight: bold;',
+  )
 
-    return
-  }
-
-  addMessage('user', question)
-
-  userInput.value = ''
-  loading.value = true
+  const totalStartedAt = performance.now()
 
   try {
-    const documents = rankDocuments(question)
+    /*
+     * 1. 지역 데이터 상태
+     */
+    console.table({
+      dataLoaded: dataLoaded.value,
+      totalLocalData: localData.value.length,
+      mockMode:
+        import.meta.env.VITE_USE_MOCK_API,
+      model:
+        import.meta.env.VITE_OPENAI_MODEL ||
+        'gpt-5-mini',
+    })
 
+    if (!dataLoaded.value) {
+      throw new Error(
+        '지역 데이터가 아직 준비되지 않았습니다.',
+      )
+    }
+
+    if (localData.value.length === 0) {
+      throw new Error(
+        '데이터 로딩 상태는 완료됐지만 localData가 비어 있습니다.',
+      )
+    }
+
+    addMessage('user', question)
+
+    userInput.value = ''
+    loading.value = true
+
+    /*
+     * 2. 검색 결과 확인
+     */
+    const searchStartedAt = performance.now()
+    const documents = rankDocuments(question)
+    const searchDurationMs = Math.round(
+      performance.now() - searchStartedAt,
+    )
+
+    console.table({
+      query: question,
+      matchedDocumentCount: documents.length,
+      searchDurationMs,
+    })
+
+    console.log(
+      '[CHAT DEBUG] 검색된 문서:',
+      documents.map((document, index) => ({
+        index,
+        title:
+          document.title ||
+          document.name ||
+          '제목 없음',
+        category: document._category,
+        address: [
+          document.addr1,
+          document.addr2,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      })),
+    )
+
+    /*
+     * 3. 프롬프트 확인
+     */
     const apiMessages = createApiMessages(
       question,
       documents,
     )
+
+    const promptCharacters = apiMessages.reduce(
+      (sum, message) =>
+        sum + message.content.length,
+      0,
+    )
+
+    console.table({
+      apiMessageCount: apiMessages.length,
+      promptCharacters,
+    })
+
+    console.log(
+      '[CHAT DEBUG] API 메시지:',
+      apiMessages.map((message, index) => ({
+        index,
+        role: message.role,
+        length: message.content.length,
+        preview: message.content.slice(0, 300),
+      })),
+    )
+
+    /*
+     * 개발 중에 전체 프롬프트가 필요하면 펼쳐서 확인
+     */
+    console.debug(
+      '[CHAT DEBUG] 전체 API payload:',
+      structuredClone(apiMessages),
+    )
+
+    /*
+     * 4. API 호출
+     */
+    const apiStartedAt = performance.now()
 
     const answer = await callOpenAI(
       apiMessages,
       question,
     )
 
+    const apiDurationMs = Math.round(
+      performance.now() - apiStartedAt,
+    )
+
+    console.table({
+      apiDurationMs,
+      answerLength: answer.length,
+      totalDurationMs: Math.round(
+        performance.now() - totalStartedAt,
+      ),
+    })
+
     addMessage('assistant', answer)
   } catch (error) {
+    const debugInfo = {
+      name: error.name,
+      message: error.message,
+      stage: error.stage || 'chatbot_flow',
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      requestId: error.requestId,
+      durationMs: error.durationMs,
+      responseBody: error.responseBody,
+      stack: error.stack,
+    }
+
     console.error(
-      '챗봇 요청 중 오류가 발생했습니다.',
-      error,
+      '[CHAT DEBUG] 최종 오류 정보:',
+      debugInfo,
     )
+
+    const errorDetails = [
+      `단계: ${debugInfo.stage}`,
+      debugInfo.status
+        ? `HTTP 상태: ${debugInfo.status}`
+        : '',
+      debugInfo.code
+        ? `오류 코드: ${debugInfo.code}`
+        : '',
+      debugInfo.requestId
+        ? `요청 ID: ${debugInfo.requestId}`
+        : '',
+      debugInfo.durationMs
+        ? `소요 시간: ${debugInfo.durationMs}ms`
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' / ')
 
     addMessage(
       'system',
-      `챗봇 요청 중 오류가 발생했습니다. ${error.message}`,
+      [
+        `챗봇 오류: ${error.message}`,
+        errorDetails,
+      ]
+        .filter(Boolean)
+        .join('\n'),
     )
   } finally {
     loading.value = false
+    console.groupEnd()
   }
 }
 

@@ -13,8 +13,14 @@ import {
   SEOUL_CATEGORIES,
 } from '@/constants/dataFiles'
 
-import { loadAllSeoulPlaces } from '@/services/seoulDataService'
+import {
+  ALL_DISTRICTS,
+  SEOUL_DISTRICTS,
+} from '@/constants/seoulDistricts'
 
+import { loadAllSeoulPlaces } from '@/services/seoulDataService'
+import RegionWeatherPanel from './RegionWeatherPanel.vue'
+import DistrictFilter from './DistrictFilter.vue'
 import MapFilter from './MapFilter.vue'
 import PlaceDetailCard from './PlaceDetailCard.vue'
 
@@ -39,19 +45,24 @@ const loading = ref(true)
 const errorMessage = ref('')
 const dataWarnings = ref([])
 const routeErrorMessage = ref('')
+const selectedDistrict = ref(ALL_DISTRICTS)
 
 let map = null
 let markerCluster = null
 let routingControl = null
 
 const filteredPlaces = computed(() => {
-  if (selectedCategory.value === ALL_CATEGORIES) {
-    return places.value
-  }
+  return places.value.filter(place => {
+    const categoryMatches =
+      selectedCategory.value === ALL_CATEGORIES ||
+      place.category === selectedCategory.value
 
-  return places.value.filter(
-    (place) => place.category === selectedCategory.value,
-  )
+    const districtMatches =
+      selectedDistrict.value === ALL_DISTRICTS ||
+      getPlaceDistrict(place) === selectedDistrict.value
+
+    return categoryMatches && districtMatches
+  })
 })
 
 const categoryCounts = computed(() => {
@@ -155,6 +166,28 @@ function showRoute() {
   }
 }
 
+function getPlaceAddress(place) {
+  return [
+    place.address,
+    place.addr1,
+    place.addr2,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+function getPlaceDistrict(place) {
+  const address = getPlaceAddress(place)
+
+  const matchedDistrict = SEOUL_DISTRICTS.find(
+    district =>
+      district.name !== ALL_DISTRICTS &&
+      address.includes(district.name),
+  )
+
+  return matchedDistrict?.name || ''
+}
+
 function clearDisplayedRoute() {
   removeRoute(map, routingControl)
   routingControl = null
@@ -243,12 +276,23 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <MapFilter
-        v-model:selected-category="selectedCategory"
-        :categories="SEOUL_CATEGORIES"
-        :category-counts="categoryCounts"
-      />
+      <div class="map-filters">
+        <DistrictFilter
+          v-model:selected-district="selectedDistrict"
+          :districts="SEOUL_DISTRICTS"
+        />
+
+        <MapFilter
+          v-model:selected-category="selectedCategory"
+          :categories="SEOUL_CATEGORIES"
+          :category-counts="categoryCounts"
+        />
+      </div>
     </header>
+
+    <RegionWeatherPanel
+      :selected-district="selectedDistrict"
+    />
 
     <p
       v-if="loading"
@@ -751,6 +795,20 @@ onBeforeUnmount(() => {
   .route-item-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+  .map-filters {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .map-filters {
+      width: 100%;
+      justify-content: flex-start;
+    }
   }
 }
 </style>

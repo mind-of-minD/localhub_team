@@ -27,25 +27,47 @@
       <!-- 게시판 탭 -->
       <Board v-else-if="currentTab === 'board'" />
     </main>
+
+    <!-- 지도/게시판 어느 화면에서도 표시되는 플로팅 챗봇 -->
+    <ChatBot />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import Board from './components/Board.vue'
+import ChatBot from './components/chatbot/ChatBot.vue'
 import MapView from './features/map/MapView.vue'
 
 const currentTab = ref('board')
 </script>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+button,
+input,
+textarea {
+  font: inherit;
+}
+
 .navbar {
+  position: relative;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -90,5 +112,23 @@ body {
   min-height: calc(100vh - 64px);
 }
 
-/* 게시판에 여백이 필요하다면 Board.vue 내부에서 처리하는 것이 안전함 */
+@media (max-width: 600px) {
+  .navbar {
+    min-height: 56px;
+    padding: 0 14px;
+  }
+
+  .logo {
+    font-size: 1rem;
+  }
+
+  .menu-tabs button {
+    padding: 17px 11px;
+    font-size: 0.9rem;
+  }
+
+  .content-area {
+    min-height: calc(100vh - 56px);
+  }
+}
 </style>
